@@ -10,11 +10,16 @@ from flask import (
 from dotenv import load_dotenv
 from validators import url
 from urllib.parse import urlparse
-from datetime import datetime
 from bs4 import BeautifulSoup
-from psycopg2.extras import NamedTupleCursor
 from requests import ConnectionError, HTTPError
-import psycopg2
+from page_analyzer.db import (
+    get_urls_data,
+    get_checks_data,
+    get_urls_from_db,
+    save_new_url_to_bd_urls,
+    check_url_from_db,
+    save_to_db_url_checks,
+)
 import requests
 import os
 
@@ -22,7 +27,6 @@ import os
 load_dotenv()
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
-DATABASE_URL = os.getenv("DATABASE_URL")
 LENGTH = 255
 
 
@@ -44,23 +48,6 @@ def get_content(data: str) -> tuple:
     return h1, title, description
 
 
-def save_new_url_to_bd_urls(url):
-    with psycopg2.connect(DATABASE_URL) as conn:
-        with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-            curs.execute('''
-            SELECT id FROM urls WHERE name = %s''', (url,))
-            data = curs.fetchone()
-            if data:
-                return data.id, False
-            curs.execute('''
-            INSERT INTO urls (name, created_at)
-            VALUES (%s, %s) RETURNING id''', (
-                url, datetime.now().isoformat(timespec="seconds")),
-            )
-            data = curs.fetchone()
-    return data.id, True
-
-
 def check_error(url_with_form: str) -> list:
     if not url(url_with_form):
         flash("Некорректный URL", "danger")
@@ -73,7 +60,12 @@ def check_error(url_with_form: str) -> list:
 
 @app.errorhandler(404)
 def page_not_found(error):
-    return render_template("404.html"), 404
+    return render_template("errors/404.html"), 404
+
+
+@app.errorhandler(500)
+def server_error(error):
+    return render_template("errors/500.html"), 500
 
 
 @app.route("/")
@@ -91,44 +83,36 @@ def add_url():
             url=url_with_form,
             messages=error), 422
     correct_url = normalize_url(url_with_form)
-    id, recorded = save_new_url_to_bd_urls(correct_url)
-    if recorded:
+    data = save_new_url_to_bd_urls(correct_url)
+    if data["recorded"] == "error":
+        return render_template('errors/500.html'), 500
+    if data["recorded"]:
         flash("Страница успешно добавлена", "success")
-        return redirect(url_for("get_url", id=id))
+        return redirect(url_for("get_url", id=data["id"]))
     flash("Страница уже существует", "info")
-    return redirect(url_for("get_url", id=id))
+    return redirect(url_for("get_url", id=data["id"]))
 
 
 @app.route("/urls", methods=["GET"])
 def get_urls():
-    with psycopg2.connect(DATABASE_URL) as conn:
-        with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-            curs.execute('''
-            SELECT DISTINCT ON (urls.id, urls.name) urls.id, urls.name,
-                url_checks.created_at, url_checks.status_code
-            FROM urls LEFT JOIN url_checks ON urls.id = url_checks.url_id
-            ORDER BY urls.id DESC''')
-            data = curs.fetchall()
+    data = get_urls_from_db()
+    if not data:
+        # flash('Ой, что-то отвалилось :(', "danger")
+        # messages = get_flashed_messages(with_categories=True)
+        # return render_template(
+        #     'index.html',
+        #     messages=messages), 500
+        return render_template('errors/500.html'), 500
     return render_template("urls.html", data=data)
 
 
 @app.route("/urls/<id>", methods=["GET"])
 def get_url(id):
+    urls_data = get_urls_data(id)
+    if not urls_data:
+        return render_template('errors/404.html'), 404
+    checks_data = get_checks_data(id)
     messages = get_flashed_messages(with_categories=True)
-    with psycopg2.connect(DATABASE_URL) as conn:
-        with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-            try:
-                curs.execute('''
-                SELECT * FROM urls WHERE id = %s''', (id,))
-            except psycopg2.errors.InvalidTextRepresentation:
-                return render_template("404.html")
-            urls_data = curs.fetchone()
-            if not urls_data:
-                return render_template("404.html")
-            curs.execute('''
-            SELECT * FROM url_checks
-            WHERE url_id = %s ORDER BY id DESC''', (urls_data.id,))
-            checks_data = curs.fetchall()
     return render_template(
         "url.html",
         urls_id=urls_data.id,
@@ -141,26 +125,15 @@ def get_url(id):
 
 @app.route("/urls/<id>/checks", methods=["POST", "GET"])
 def check_url(id):
-    with psycopg2.connect(DATABASE_URL) as conn:
-        with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-            curs.execute('''
-            SELECT name from urls WHERE id = %s''', (id,))
-            data = curs.fetchone()
+    data = check_url_from_db(id)
     try:
         response = requests.get(data.name)
         response.raise_for_status()
     except (ConnectionError, HTTPError):
         flash("Произошла ошибка при проверке", "danger")
         return redirect(url_for('get_url', id=id))
+    status_code = response.status_code
     h1, title, description = get_content(response.text)
-    with psycopg2.connect(DATABASE_URL) as conn:
-        with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-            curs.execute('''
-            INSERT INTO url_checks
-            (url_id, created_at, status_code, h1, title, description)
-            VALUES (%s, %s, %s, %s, %s, %s)''', (
-                id, datetime.today().isoformat(),
-                response.status_code, h1, title, description),
-            )
+    save_to_db_url_checks(id, status_code, h1, title, description)
     flash("Страница успешно проверена", "success")
     return redirect(url_for("get_url", id=id))
