@@ -1,44 +1,25 @@
 from page_analyzer.app import get_content
 import pytest
 
-META1 = """
-<html>
-    <head>
-        <h1>h1</h1>
-        <title>title</title>
-        <meta name="description" content="description">
-    </head>
-</html>"""
-META2 = """
-<html>
-    <head>
-        <title>title</title>
-        <meta name="description" content="description">
-    </head>
-</html>"""
-META3 = """
-<html>
-    <head>
-        <h1>h1</h1>
-        <meta name="description" content="description">
-    </head>
-</html>"""
-META4 = """
-<html>
-    <head>
-        <h1>h1</h1>
-        <title>title</title>
-    </head>
-</html>"""
+URL_1 = "tests/fixtures/url_1.html"
+URL_2 = "tests/fixtures/url_2.html"
+URL_3 = "tests/fixtures/url_3.html"
+URL_4 = "tests/fixtures/url_4.html"
+
+
+def read_html(url):
+    with open(url) as file:
+        meta = file.read()
+    return meta
 
 
 @pytest.mark.parametrize(
     "url, result",
     [
-        (META1, ("h1", "title", "description")),
-        (META2, ("", "title", "description")),
-        (META3, ("h1", "", "description")),
-        (META4, ("h1", "title", "")),
+        (read_html(URL_1), ("h1", "title", "description")),
+        (read_html(URL_2), ("", "title", "description")),
+        (read_html(URL_3), ("h1", "", "description")),
+        (read_html(URL_4), ("h1", "title", "")),
     ],
 )
 def test_get_content(url, result):
