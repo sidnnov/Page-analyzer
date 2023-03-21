@@ -8,7 +8,6 @@ from flask import (
     redirect,
 )
 from dotenv import load_dotenv
-from validators import url
 from requests import ConnectionError, HTTPError
 from page_analyzer.db import (
     get_urls_data,
@@ -18,7 +17,11 @@ from page_analyzer.db import (
     check_url_from_db,
     save_to_db_url_checks,
 )
-from page_analyzer.utility import get_content, normalize_url
+from page_analyzer.utility import (
+    check_error,
+    get_content,
+    normalize_url,
+)
 import requests
 import os
 
@@ -26,17 +29,6 @@ import os
 load_dotenv()
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
-LENGTH = 255
-
-
-def check_error(url_with_form: str) -> list:
-    if not url(url_with_form):
-        flash("Некорректный URL", "danger")
-        if not url_with_form:
-            flash("URL обязателен", "danger")
-    if len(url_with_form) > LENGTH:
-        flash(f"URL превышает {LENGTH} символов", "danger")
-    return get_flashed_messages(with_categories=True)
 
 
 @app.errorhandler(404)
@@ -109,6 +101,7 @@ def check_url(id):
         flash("Произошла ошибка при проверке", "danger")
         return redirect(url_for('get_url', id=id))
     status_code = response.status_code
+    print(response.text)
     h1, title, description = get_content(response.text)
     save_to_db_url_checks(id, status_code, h1, title, description)
     flash("Страница успешно проверена", "success")

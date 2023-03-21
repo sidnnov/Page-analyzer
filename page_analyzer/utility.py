@@ -1,5 +1,9 @@
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
+from validators import url
+
+
+LENGTH = 255
 
 
 def normalize_url(url: str) -> str:
@@ -7,6 +11,17 @@ def normalize_url(url: str) -> str:
     correct_url = url_parse._replace(
         path="", params="", query="", fragment="").geturl()
     return correct_url
+
+
+def check_error(url_with_form: str) -> list:
+    error = []
+    if not url(url_with_form):
+        error.append(("danger", "Некорректный URL"))
+        if not url_with_form:
+            error.append(("danger", "URL обязателен"))
+    if len(url_with_form) > LENGTH:
+        error.append(("danger", f"URL превышает {LENGTH} символов"))
+    return error
 
 
 def get_content(data: str) -> tuple:
