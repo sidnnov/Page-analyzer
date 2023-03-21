@@ -2,7 +2,7 @@ from page_analyzer.app import get_content
 import pytest
 
 
-URL_1 = "python-project-83/tests/fixtures/url_1.html"
+URL_1 = "tests/fixtures/url_1.html"
 URL_2 = "tests/fixtures/url_2.html"
 URL_3 = "tests/fixtures/url_3.html"
 URL_4 = "tests/fixtures/url_4.html"
