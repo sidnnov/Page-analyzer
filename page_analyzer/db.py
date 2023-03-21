@@ -23,7 +23,7 @@ def get_urls_from_db():
                 data = curs.fetchall()
         return data
     except psycopg2.Error:
-        return None
+        return 'error'
 
 
 def save_new_url_to_bd_urls(url: str) -> dict:

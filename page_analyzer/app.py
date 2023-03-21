@@ -69,7 +69,7 @@ def add_url():
 @app.route("/urls", methods=["GET"])
 def get_urls():
     data = get_urls_from_db()
-    if not data:
+    if data == 'error':
         return render_template('errors/500.html'), 500
     return render_template("urls.html", data=data)
 
