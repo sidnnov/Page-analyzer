@@ -3,6 +3,12 @@ PORT ?= 8000
 schema-load:
 	psql page_analyzer < database.sql
 
+start-postgresql:
+	sudo service postgresql start
+
+stop-postgresql:
+	sudo service postgresql stop
+
 db-create:
 	createdb page_analyzer
 
