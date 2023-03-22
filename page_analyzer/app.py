@@ -10,6 +10,7 @@ from flask import (
 from dotenv import load_dotenv
 from requests import ConnectionError, HTTPError
 from page_analyzer.db import (
+    get_id_if_exist,
     get_urls_data,
     get_checks_data,
     get_urls_from_db,
@@ -56,14 +57,15 @@ def add_url():
             url=url_with_form,
             messages=error), 422
     correct_url = normalize_url(url_with_form)
+    id = get_id_if_exist(correct_url)
+    if id:
+        flash("Страница уже существует", "info")
+        return redirect(url_for("get_url", id=id))
     data = save_new_url_to_bd_urls(correct_url)
-    if data["recorded"] == "error":
+    if data is None:
         return render_template('errors/500.html'), 500
-    if data["recorded"]:
-        flash("Страница успешно добавлена", "success")
-        return redirect(url_for("get_url", id=data["id"]))
-    flash("Страница уже существует", "info")
-    return redirect(url_for("get_url", id=data["id"]))
+    flash("Страница успешно добавлена", "success")
+    return redirect(url_for("get_url", id=data.id))
 
 
 @app.route("/urls", methods=["GET"])
@@ -101,7 +103,6 @@ def check_url(id):
         flash("Произошла ошибка при проверке", "danger")
         return redirect(url_for('get_url', id=id))
     status_code = response.status_code
-    print(response.text)
     h1, title, description = get_content(response.text)
     save_to_db_url_checks(id, status_code, h1, title, description)
     flash("Страница успешно проверена", "success")

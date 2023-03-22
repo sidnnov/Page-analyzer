@@ -2,8 +2,10 @@ from datetime import datetime
 from psycopg2.extras import NamedTupleCursor
 import psycopg2
 import os
+from dotenv import load_dotenv
 
 
+load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
@@ -26,24 +28,29 @@ def get_urls_from_db():
         return 'error'
 
 
-def save_new_url_to_bd_urls(url: str) -> dict:
+def get_id_if_exist(url: str) -> int:
+    with connect_to_db() as conn:
+        with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
+            curs.execute('''
+            SELECT id FROM urls WHERE name = %s''', (url,))
+            data = curs.fetchone()
+    if data:
+        return data.id
+
+
+def save_new_url_to_bd_urls(url: str):
     try:
         with connect_to_db() as conn:
             with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-                curs.execute('''
-                SELECT id FROM urls WHERE name = %s''', (url,))
-                data = curs.fetchone()
-                if data:
-                    return {"id": data.id, "recorded": False}
                 curs.execute('''
                 INSERT INTO urls (name, created_at)
                 VALUES (%s, %s) RETURNING id''', (
                     url, datetime.now().isoformat(timespec="seconds")),
                 )
                 data = curs.fetchone()
-        return {"id": data.id, "recorded": True}
+        return data
     except psycopg2.Error:
-        return {"id": None, "recorded": "error"}
+        return None
 
 
 def save_to_db_url_checks(id, status_code, h1, title, description):
