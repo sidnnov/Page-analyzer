@@ -8,22 +8,21 @@ from flask import (
     redirect,
 )
 from dotenv import load_dotenv
-from requests import ConnectionError, HTTPError
 from page_analyzer.db import (
     get_id_if_exist,
     get_urls_data,
     get_checks_data,
     get_urls_from_db,
     save_new_url_to_bd_urls,
-    check_url_from_db,
+    get_url_from_db,
     save_to_db_url_checks,
 )
 from page_analyzer.utility import (
     check_error,
     get_content,
+    get_data_from_url,
     normalize_url,
 )
-import requests
 import os
 
 
@@ -95,15 +94,13 @@ def get_url(id):
 
 @app.route("/urls/<id>/checks", methods=["POST", "GET"])
 def check_url(id):
-    data = check_url_from_db(id)
-    try:
-        response = requests.get(data.name)
-        response.raise_for_status()
-    except (ConnectionError, HTTPError):
+    url = get_url_from_db(id)
+    data = get_data_from_url(url)
+    if data is None:
         flash("Произошла ошибка при проверке", "danger")
         return redirect(url_for('get_url', id=id))
-    status_code = response.status_code
-    h1, title, description = get_content(response.text)
+    status_code, data_html = data
+    h1, title, description = get_content(data_html)
     save_to_db_url_checks(id, status_code, h1, title, description)
     flash("Страница успешно проверена", "success")
     return redirect(url_for("get_url", id=id))

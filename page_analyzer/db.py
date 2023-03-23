@@ -88,10 +88,10 @@ def get_checks_data(id: int):
     return checks_data
 
 
-def check_url_from_db(id: int):
+def get_url_from_db(id: int):
     with connect_to_db() as conn:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             curs.execute('''
             SELECT name from urls WHERE id = %s''', (id,))
             data = curs.fetchone()
-    return data
+    return data.name

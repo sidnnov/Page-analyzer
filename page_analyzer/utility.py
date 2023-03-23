@@ -1,7 +1,7 @@
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from validators import url
-
+import requests
 
 LENGTH = 255
 
@@ -22,6 +22,15 @@ def check_error(url_with_form: str) -> list:
     if len(url_with_form) > LENGTH:
         error.append(("danger", f"URL превышает {LENGTH} символов"))
     return error
+
+
+def get_data_from_url(url: str) -> tuple:
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+    except (requests.ConnectionError, requests.HTTPError):
+        return None
+    return response.status_code, response.text
 
 
 def get_content(data: str) -> tuple:
