@@ -1,4 +1,5 @@
-from page_analyzer.app import check_error, app
+from page_analyzer.app import app
+from page_analyzer.utils import check_error
 import pytest
 import os
 
