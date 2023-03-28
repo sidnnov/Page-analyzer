@@ -56,7 +56,7 @@ def add_url():
     data = db.save_url_to_urls(correct_url, conn)
     db.close(conn)
     if data is None:
-        return render_template('errors/500.html'), 500
+        return render_template("errors/500.html"), 500
 
     flash("Страница успешно добавлена", "success")
     return redirect(url_for("get_url", id=data.id))
@@ -67,8 +67,8 @@ def get_urls():
     conn = db.create_connection()
     data = db.get_urls(conn)
     db.close(conn)
-    if data == 'error':
-        return render_template('errors/500.html'), 500
+    if data == "error":
+        return render_template("errors/500.html"), 500
 
     return render_template("urls.html", data=data)
 
@@ -80,7 +80,7 @@ def get_url(id):
 
     if not urls_data:
         db.close(conn)
-        return render_template('errors/404.html'), 404
+        return render_template("errors/404.html"), 404
 
     checks_data = db.get_checks_data(id, conn)
     messages = get_flashed_messages(with_categories=True)
@@ -104,7 +104,7 @@ def check_url(id):
     if data is None:
         db.close(conn)
         flash("Произошла ошибка при проверке", "danger")
-        return redirect(url_for('get_url', id=id))
+        return redirect(url_for("get_url", id=id))
 
     status_code, data_html = data
     content = utils.get_content(data_html)

@@ -4,9 +4,9 @@ import responses
 
 @responses.activate
 def test_get_data_from_url():
-    url = 'https://example.com/'
+    url = "https://example.com/"
     expected_status_code = 200
-    expected_text = 'Some text'
+    expected_text = "Some text"
     responses.add(
         responses.GET,
         url,
