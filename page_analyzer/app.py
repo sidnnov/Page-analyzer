@@ -8,16 +8,8 @@ from flask import (
     redirect,
 )
 from dotenv import load_dotenv
-from page_analyzer.db import (
-    get_id_if_exist,
-    get_urls_data,
-    get_checks_data,
-    get_urls_from_db,
-    save_new_url_to_bd_urls,
-    get_url_from_db,
-    save_to_db_url_checks,
-)
-from page_analyzer.utility import (
+from page_analyzer import db
+from page_analyzer.utils import (
     check_error,
     get_content,
     get_data_from_url,
@@ -48,39 +40,51 @@ def index():
 
 @app.route("/urls", methods=["POST"])
 def add_url():
+    conn = db.create_connection()
     url_with_form = request.form["url"].lower()
     error = check_error(url_with_form)
+
     if error:
         return render_template(
             "/index.html",
             url=url_with_form,
             messages=error), 422
+
     correct_url = normalize_url(url_with_form)
-    id = get_id_if_exist(correct_url)
+    id = db.get_id_if_exist(correct_url, conn)
+
     if id:
         flash("Страница уже существует", "info")
         return redirect(url_for("get_url", id=id))
-    data = save_new_url_to_bd_urls(correct_url)
+
+    data = db.save_url_to_urls(correct_url)
+
     if data is None:
         return render_template('errors/500.html'), 500
+
     flash("Страница успешно добавлена", "success")
     return redirect(url_for("get_url", id=data.id))
 
 
 @app.route("/urls", methods=["GET"])
 def get_urls():
-    data = get_urls_from_db()
+    conn = db.create_connection()
+    data = db.get_urls(conn)
     if data == 'error':
         return render_template('errors/500.html'), 500
+
     return render_template("urls.html", data=data)
 
 
 @app.route("/urls/<id>", methods=["GET"])
 def get_url(id):
-    urls_data = get_urls_data(id)
+    conn = db.create_connection()
+    urls_data = db.get_urls_data(id, conn)
+
     if not urls_data:
         return render_template('errors/404.html'), 404
-    checks_data = get_checks_data(id)
+
+    checks_data = db.get_checks_data(id, conn)
     messages = get_flashed_messages(with_categories=True)
     return render_template(
         "url.html",
@@ -94,13 +98,16 @@ def get_url(id):
 
 @app.route("/urls/<id>/checks", methods=["POST", "GET"])
 def check_url(id):
-    url = get_url_from_db(id)
+    conn = db.create_connection()
+    url = db.get_url(id, conn)
     data = get_data_from_url(url)
+
     if data is None:
         flash("Произошла ошибка при проверке", "danger")
         return redirect(url_for('get_url', id=id))
+
     status_code, data_html = data
     h1, title, description = get_content(data_html)
-    save_to_db_url_checks(id, status_code, h1, title, description)
+    db.save_to_url_checks(id, status_code, h1, title, description)
     flash("Страница успешно проверена", "success")
     return redirect(url_for("get_url", id=id))

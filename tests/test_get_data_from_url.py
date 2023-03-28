@@ -1,4 +1,4 @@
-from page_analyzer.utility import get_data_from_url
+from page_analyzer.utils import get_data_from_url
 import responses
 
 
