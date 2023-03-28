@@ -9,15 +9,11 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
-def connect_to_db():
-    return psycopg2.connect(DATABASE_URL)
-
-
 def create_connection():
     return psycopg2.connect(DATABASE_URL)
 
 
-def close_connection(conn):
+def close(conn):
     return conn.close()
 
 
@@ -44,31 +40,32 @@ def get_id_if_exist(url: str, conn) -> int:
         return data.id
 
 
-def save_url_to_urls(url: str):
+def save_url_to_urls(url: str, conn):
     try:
-        with connect_to_db() as conn:
-            with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-                curs.execute('''
-                INSERT INTO urls (name, created_at)
-                VALUES (%s, %s) RETURNING id''', (
-                    url, datetime.now().isoformat(timespec="seconds")),
-                )
-                data = curs.fetchone()
+        with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
+            curs.execute('''
+            INSERT INTO urls (name, created_at)
+            VALUES (%s, %s) RETURNING id''', (
+                url, datetime.now().isoformat(timespec="seconds")),
+            )
+            data = curs.fetchone()
+            conn.commit()
         return data
     except psycopg2.Error:
         return None
 
 
-def save_to_url_checks(id, status_code, h1, title, description):
-    with connect_to_db() as conn:
-        with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-            curs.execute('''
-            INSERT INTO url_checks
-            (url_id, created_at, status_code, h1, title, description)
-            VALUES (%s, %s, %s, %s, %s, %s)''', (
-                id, datetime.today().isoformat(),
-                status_code, h1, title, description),
-            )
+def save_to_url_checks(id, status_code, content, conn):
+    h1, title, description = content
+    with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
+        curs.execute('''
+        INSERT INTO url_checks
+        (url_id, created_at, status_code, h1, title, description)
+        VALUES (%s, %s, %s, %s, %s, %s)''', (
+            id, datetime.today().isoformat(),
+            status_code, h1, title, description),
+        )
+        conn.commit()
     return
 
 

@@ -9,12 +9,7 @@ from flask import (
 )
 from dotenv import load_dotenv
 from page_analyzer import db
-from page_analyzer.utils import (
-    check_error,
-    get_content,
-    get_data_from_url,
-    normalize_url,
-)
+from page_analyzer import utils
 import os
 
 
@@ -40,9 +35,8 @@ def index():
 
 @app.route("/urls", methods=["POST"])
 def add_url():
-    conn = db.create_connection()
     url_with_form = request.form["url"].lower()
-    error = check_error(url_with_form)
+    error = utils.check_error(url_with_form)
 
     if error:
         return render_template(
@@ -50,15 +44,17 @@ def add_url():
             url=url_with_form,
             messages=error), 422
 
-    correct_url = normalize_url(url_with_form)
+    correct_url = utils.normalize_url(url_with_form)
+    conn = db.create_connection()
     id = db.get_id_if_exist(correct_url, conn)
 
     if id:
+        db.close(conn)
         flash("Страница уже существует", "info")
         return redirect(url_for("get_url", id=id))
 
-    data = db.save_url_to_urls(correct_url)
-
+    data = db.save_url_to_urls(correct_url, conn)
+    db.close(conn)
     if data is None:
         return render_template('errors/500.html'), 500
 
@@ -70,6 +66,7 @@ def add_url():
 def get_urls():
     conn = db.create_connection()
     data = db.get_urls(conn)
+    db.close(conn)
     if data == 'error':
         return render_template('errors/500.html'), 500
 
@@ -82,10 +79,12 @@ def get_url(id):
     urls_data = db.get_urls_data(id, conn)
 
     if not urls_data:
+        db.close(conn)
         return render_template('errors/404.html'), 404
 
     checks_data = db.get_checks_data(id, conn)
     messages = get_flashed_messages(with_categories=True)
+    db.close(conn)
     return render_template(
         "url.html",
         urls_id=urls_data.id,
@@ -100,14 +99,16 @@ def get_url(id):
 def check_url(id):
     conn = db.create_connection()
     url = db.get_url(id, conn)
-    data = get_data_from_url(url)
+    data = utils.get_data_from_url(url)
 
     if data is None:
+        db.close(conn)
         flash("Произошла ошибка при проверке", "danger")
         return redirect(url_for('get_url', id=id))
 
     status_code, data_html = data
-    h1, title, description = get_content(data_html)
-    db.save_to_url_checks(id, status_code, h1, title, description)
+    content = utils.get_content(data_html)
+    db.save_to_url_checks(id, status_code, content, conn)
+    db.close(conn)
     flash("Страница успешно проверена", "success")
     return redirect(url_for("get_url", id=id))
