@@ -1,23 +1,17 @@
 from datetime import datetime
 from psycopg2.extras import NamedTupleCursor
-from dotenv import load_dotenv
 import psycopg2
-import os
 
 
-load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-
-def create_connection():
-    return psycopg2.connect(DATABASE_URL)
+def create_connection(app):
+    return psycopg2.connect(app.config["DATABASE_URL"])
 
 
 def close(conn):
     return conn.close()
 
 
-def get_urls(conn):
+def get_urls_4(conn):
     try:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             curs.execute('''
@@ -31,7 +25,7 @@ def get_urls(conn):
         return 'error'
 
 
-def get_id_if_exist(url: str, conn) -> int:
+def get_id_if_exist(conn, url: str) -> int:
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
         curs.execute('''
         SELECT id FROM urls WHERE name = %s''', (url,))
@@ -40,7 +34,7 @@ def get_id_if_exist(url: str, conn) -> int:
         return data.id
 
 
-def save_url_to_urls(url: str, conn):
+def save_url(conn, url: str):
     try:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             curs.execute('''
@@ -55,7 +49,7 @@ def save_url_to_urls(url: str, conn):
         return None
 
 
-def save_to_url_checks(id, status_code, content, conn):
+def save_url_checks(conn, id, status_code, content):
     h1, title, description = content
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
         curs.execute('''
@@ -69,7 +63,7 @@ def save_to_url_checks(id, status_code, content, conn):
     return
 
 
-def get_urls_data(id: int, conn):
+def get_urls(conn, id: int):
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
         try:
             curs.execute('''
@@ -80,7 +74,7 @@ def get_urls_data(id: int, conn):
     return urls_data
 
 
-def get_checks_data(id: int, conn):
+def get_checks(conn, id: int):
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
         curs.execute('''
         SELECT * FROM url_checks
@@ -89,7 +83,7 @@ def get_checks_data(id: int, conn):
     return checks_data
 
 
-def get_url(id: int, conn):
+def get_url(conn, id: int):
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
         curs.execute('''
         SELECT name from urls WHERE id = %s''', (id,))
