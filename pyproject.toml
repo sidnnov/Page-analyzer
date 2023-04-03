@@ -1,10 +1,15 @@
 [tool.poetry]
 name = "hexlet-code"
 version = "0.1.0"
-description = ""
+description = "Web application for сheck sites SEO suitability"
 authors = ["sidnnov <sidnnov@gmail.com>"]
 readme = "README.md"
 packages = [{include = "page_analyzer"}]
+classifiers = [
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+repository = "https://github.com/sidnnov/python-project-83"
 
 [tool.poetry.dependencies]
 python = "^3.7"
