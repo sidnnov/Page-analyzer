@@ -1,16 +1,16 @@
 from datetime import datetime
 from psycopg2.extras import NamedTupleCursor
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 import psycopg2
-import os
+# import os
 
 
-load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL")
+# # load_dotenv()
+# # DATABASE_URL = os.getenv("DATABASE_URL")
 
 
-def create_connection():
-    return psycopg2.connect(DATABASE_URL)
+def create_connection(app):
+    return psycopg2.connect(app.config["DATABASE_URL"])
 
 
 def close(conn):

@@ -16,6 +16,7 @@ import os
 load_dotenv()
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+app.config["DATABASE_URL"] = os.getenv("DATABASE_URL")
 
 
 @app.errorhandler(404)
@@ -45,7 +46,7 @@ def add_url():
             messages=error), 422
 
     correct_url = utils.normalize_url(url_with_form)
-    conn = db.create_connection()
+    conn = db.create_connection(app)
     id = db.get_id_if_exist(correct_url, conn)
 
     if id:
@@ -64,7 +65,7 @@ def add_url():
 
 @app.route("/urls", methods=["GET"])
 def get_urls():
-    conn = db.create_connection()
+    conn = db.create_connection(app)
     data = db.get_urls(conn)
     db.close(conn)
     if data == "error":
@@ -75,7 +76,7 @@ def get_urls():
 
 @app.route("/urls/<id>", methods=["GET"])
 def get_url(id):
-    conn = db.create_connection()
+    conn = db.create_connection(app)
     urls_data = db.get_urls_data(id, conn)
 
     if not urls_data:
@@ -97,7 +98,7 @@ def get_url(id):
 
 @app.route("/urls/<id>/checks", methods=["POST", "GET"])
 def check_url(id):
-    conn = db.create_connection()
+    conn = db.create_connection(app)
     url = db.get_url(id, conn)
     data = utils.get_data_from_url(url)
 
