@@ -11,7 +11,7 @@ def close(conn):
     return conn.close()
 
 
-def get_urls_4(conn):
+def get_urls_with_checks(conn):
     try:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             curs.execute('''
@@ -49,7 +49,7 @@ def save_url(conn, url: str):
         return None
 
 
-def save_url_checks(conn, id, status_code, content):
+def save_check(conn, id, status_code, content):
     h1, title, description = content
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
         curs.execute('''
@@ -63,7 +63,7 @@ def save_url_checks(conn, id, status_code, content):
     return
 
 
-def get_urls(conn, id: int):
+def get_url(conn, id: int):
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
         try:
             curs.execute('''
@@ -74,7 +74,7 @@ def get_urls(conn, id: int):
     return urls_data
 
 
-def get_checks(conn, id: int):
+def get_check(conn, id: int):
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
         curs.execute('''
         SELECT * FROM url_checks
@@ -83,7 +83,7 @@ def get_checks(conn, id: int):
     return checks_data
 
 
-def get_url(conn, id: int):
+def get_url_name(conn, id: int):
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
         curs.execute('''
         SELECT name from urls WHERE id = %s''', (id,))

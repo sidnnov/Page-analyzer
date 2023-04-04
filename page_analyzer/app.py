@@ -66,7 +66,7 @@ def add_url():
 @app.route("/urls", methods=["GET"])
 def get_urls():
     conn = db.create_connection(app)
-    data = db.get_urls_4(conn)
+    data = db.get_urls_with_checks(conn)
     db.close(conn)
     if data == "error":
         return render_template("errors/500.html"), 500
@@ -77,13 +77,13 @@ def get_urls():
 @app.route("/urls/<id>", methods=["GET"])
 def get_url(id):
     conn = db.create_connection(app)
-    urls_data = db.get_urls(conn, id)
+    urls_data = db.get_url(conn, id)
 
     if not urls_data:
         db.close(conn)
         return render_template("errors/404.html"), 404
 
-    checks_data = db.get_checks(conn, id)
+    check_data = db.get_check(conn, id)
     messages = get_flashed_messages(with_categories=True)
     db.close(conn)
     return render_template(
@@ -91,7 +91,7 @@ def get_url(id):
         urls_id=urls_data.id,
         name=urls_data.name,
         urls_date=urls_data.created_at,
-        checks_data=checks_data,
+        checks_data=check_data,
         messages=messages,
     )
 
@@ -99,7 +99,7 @@ def get_url(id):
 @app.route("/urls/<id>/checks", methods=["POST", "GET"])
 def check_url(id):
     conn = db.create_connection(app)
-    url = db.get_url(conn, id)
+    url = db.get_url_name(conn, id)
     data = utils.get_data_from_url(url)
 
     if data is None:
@@ -109,7 +109,7 @@ def check_url(id):
 
     status_code, data_html = data
     content = utils.get_content(data_html)
-    db.save_url_checks(conn, id, status_code, content)
+    db.save_check(conn, id, status_code, content)
     db.close(conn)
     flash("Страница успешно проверена", "success")
     return redirect(url_for("get_url", id=id))
